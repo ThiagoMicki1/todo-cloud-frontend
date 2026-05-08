@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>React To-Do List</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            font-family: 'Segoe UI', sans-serif;
+            display: flex; justify-content: center; padding: 50px;
+            margin: 0;
+        }
+        .main-container {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            width: 1000px; /* Slightly wider for the actions */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        h2 { color: white; text-align: center; font-size: 28px; margin-bottom: 30px; }
+        .nav-bar { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+        .nav-btn {
+            background: white; border: none; padding: 10px 25px;
+            border-radius: 20px; cursor: pointer; font-weight: bold; color: #555;
+            transition: 0.3s; text-decoration: none; font-size: 14px;
+        }
+        .nav-btn:hover { background: #f0f0f0; }
+        .active-btn { background: #5d87ff; color: white; }
+        .logout-btn { background: #ff4d4d; color: white; }
+        
+        .list-card {
+            background: white; border-radius: 15px; padding: 20px;
+            min-height: 400px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { color: #888; font-size: 14px; padding: 15px; border-bottom: 1px solid #eee; }
+        td { padding: 15px; font-size: 14px; vertical-align: middle; }
+        
+        .action-btn {
+            border: none; background: none; cursor: pointer; 
+            font-size: 18px; transition: transform 0.2s;
+        }
+        .action-btn:hover { transform: scale(1.2); }
+
+        /* MODAL STYLES */
+        .modal {
+            display: none; position: fixed; z-index: 1000; 
+            left: 0; top: 0; width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white; margin: 5% auto; padding: 30px;
+            border-radius: 20px; width: 550px; box-shadow: 0 5px 30px rgba(0,0,0,0.3);
+        }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 14px; margin-bottom: 5px; color: #666; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px; outline: none;
+        }
+        .full-width { grid-column: span 2; }
+        .btn-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .save-btn { background: #5d87ff; color: white; border: none; padding: 10px 30px; border-radius: 10px; cursor: pointer; }
+        .cancel-btn { background: white; border: 1px solid #ccc; padding: 10px 30px; border-radius: 10px; cursor: pointer; }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <h2>React To-Do List</h2>
+        
+        <div class="nav-bar">
+    <button class="nav-btn" id="addBtn">Add a new to-do</button>
+    <a href="/?status=All" class="nav-btn {% if current_status == 'All' %}active-btn{% endif %}">All</a>
+    <a href="/?status=In Progress" class="nav-btn {% if current_status == 'In Progress' %}active-btn{% endif %}">To-do</a>
+    <a href="/?status=Completed" class="nav-btn {% if current_status == 'Completed' %}active-btn{% endif %}">Completed</a>
+    <input type="text" id="searchInput" placeholder="Search tasks..." 
+           style="padding: 10px; border-radius: 20px; border: none; outline: none; margin-left: 10px;">
+    <a href="/logout" class="nav-btn logout-btn">Logout</a>
+</div>
+
+        <div class="list-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>When</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Actions</th> </tr>
+                </thead>
+                <tbody>
+                    {% for item in todolist %}
+                    <tr>
+                        <td><strong>{{ item.what_to_do }}</strong></td>
+                        <td style="color: #666; max-width: 200px;">{{ item.description }}</td>
+                        <td>{{ item.category }}</td>
+                        <td>{{ item.due_date }}<br><small>{{ item.time }}</small></td>
+                        <td>{{ item.priority }}</td>
+                        <td>
+                            <span style="padding: 4px 8px; border-radius: 12px; font-size: 12px; 
+                                background: {% if item.status == 'Completed' %}#d4edda{% else %}#fff3cd{% endif %};
+                                color: {% if item.status == 'Completed' %}#155724{% else %}#856404{% endif %};">
+                                {{ item.status }}
+                            </span>
+                        </td>
+                        <td> {% if item.status != 'Completed' %}
+                            <a href="/complete/{{ item.id }}" title="Mark as Complete">
+                                <button class="action-btn">✅</button>
+                            </a>
+                            {% endif %}
+                            
+                            <a href="/delete/{{ item.id }}" title="Delete Task" onclick="return confirm('Are you sure you want to delete this?')">
+                                <button class="action-btn">❌</button>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="todoModal" class="modal">
+        <div class="modal-content">
+            <h3>Add a new to-do:</h3>
+            <form action="/add" method="POST">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Name:</label>
+                        <input type="text" name="name" placeholder="Task name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <textarea name="description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority:</label>
+                        <select name="priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Category:</label>
+                        <input type="text" name="category" placeholder="Work, Personal, etc.">
+                    </div>
+                    <div class="form-group">
+                        <label>Date:</label>
+                        <input type="date" name="date">
+                    </div>
+                    <div class="form-group">
+                        <label>Time:</label>
+                        <input type="time" name="time">
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <button type="submit" class="save-btn">Save</button>
+                    <button type="button" class="cancel-btn" id="cancelBtn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById("todoModal");
+        const btn = document.getElementById("addBtn");
+        const cancel = document.getElementById("cancelBtn");
+
+        btn.onclick = function() { modal.style.display = "block"; }
+        cancel.onclick = function() { modal.style.display = "none"; }
+        window.onclick = function(event) {
+            if (event.target == modal) { modal.style.display = "none"; }
+        }
+
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                // This looks at all text inside the row (Task, Description, Category, etc.)
+                let text = row.innerText.toLowerCase();
+                // If the text matches the search, show the row; otherwise, hide it
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>
